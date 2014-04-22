@@ -37,8 +37,8 @@ class featureTest(unittest.TestCase):
         f2 = featuretag('la', 'AR')
         f2.add('definite', '1')
         self.assertFeatureEquality(featureTest.f2text, f2)
-        self.assertTrue(f2.includes(f1), "".format("{0} should include {1}".format(str(f2), str(f1))))
-        self.assertFalse(f1.includes(f2), "".format("{0} should include {1}".format(str(f1), str(f2))))
+        self.assertTrue(f1 in f2, '{0} should include {1}'.format(str(f2), str(f1)))
+        self.assertFalse(f2 in f1, '{0} should include {1}'.format(str(f1), str(f2)))
         f3 = featuretag('vasos', 'NOUN', 'masc', 'plural')
         f3.add('case', 'subject')
         self.assertFeatureEquality(featureTest.f3text, f3)
@@ -118,7 +118,7 @@ class featureTest(unittest.TestCase):
                       "Missing more general featuretag")
         self.assertIn(str(featuretag(None, 'VERB', None, None, '1', 'perfect')), ft1strlist, 
                       "Missing more general featuretag")
-        
+
         ft = readFeatureTag(featureTest.f2text)
         ftlist = ft.get_more_general_list()
         self.assertTrue(ftlist is not None, "more general f7 1 is None")

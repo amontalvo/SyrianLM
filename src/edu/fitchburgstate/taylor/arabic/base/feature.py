@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import re
+from .hierarchical import FeatureHierarchicalItem
 
 def feature(strings, *opts):
     """
@@ -27,7 +28,7 @@ def _featuredict_generate():
         count += 1
     return featuredict
 
-class featuretag:
+class featuretag(FeatureHierarchicalItem):
     """
     The tags associated with a syntactic unit
     """
@@ -43,7 +44,7 @@ class featuretag:
     featuredict = _featuredict_generate()
 
     def __init__(self, transliteration, POS, gender=None, number=None, person=None, aspect=None):
-        self.tags = dict()
+        FeatureHierarchicalItem.__init__(self)
         self.add(featuretag.TRANSLITERATION, transliteration)
         self.add(featuretag.POS, POS) # DET,PREP,NOUN,VERB...
         self.add('aspect', aspect)    # perfect, imperfect,.  
@@ -51,74 +52,23 @@ class featuretag:
         self.add('number', number)    # singular, dual, plural
         if person is not None:
             self.add('person', str(person))    # 1, 2, or 3 for 1st, 2nd, or 3rd
-        self.strout = None
-        
-    def __str__(self):
-        if self.strout is None:
-            self.strout = self.tags[featuretag.POS]
-    
-            featurestr = ''
-            if featuretag.TRANSLITERATION in self.tags:
-                featurestr += self.tags[featuretag.TRANSLITERATION] + ' '
-            for feature in featuretag.featurenames:  # want features always in same order.
-                if feature in (featuretag.POS, featuretag.TRANSLITERATION) : continue
-                if not feature in self.tags : continue
-                t = self.tags[feature]
-                if t != None:
-                    featurestr += feature + '=' + t + ' '
-    
-            if len(featurestr) > 0:
-                self.strout += '(' + featurestr[:len(featurestr)-1] + ')'
-        
-        return self.strout
-
-    def add(self, ft, value):
-        """
-        add a feature with a value, raises an error if feature is invalid or is already set
-        """
-        if value is None or len(value) == 0:return
-        if not self.isValidTag(ft):
-            raise Exception('Tag {0} is not an acceptable feature'.format(ft))
-        if ft in self.tags:
-            raise Exception('Tag {0}={1} already exists in {2}'.format(ft, value, self.__str__()))
-        self.tags[ft] = value
-        self.strout = None
-
-    def equals(self, other):
-        """
-        comparison functions
-        return true iff all features identical
-        """
-        return str(self) == str(other)
-
-    def includes(self, other):
-        """
-        return true if all features specified in other match corresponding self feature
-        """
-        for ft in other.tags:
-            if (not (ft in self.tags))  or other.tags[ft] != self.tags[ft] :
-                return False
-        return True
 
     def get_more_general_list(self, already_created_set = None):
+        '''
+        returns a list of featuretags items that are less specific by one feature
+        '''
         returnList = []
-        if len(self.tags) > 1:
-            if featuretag.TRANSLITERATION in self.tags:
-                ftmg = self._new_more_general([ft for ft in self.tags.keys() 
+        if len(self.features) > 1:
+            if featuretag.TRANSLITERATION in self.features:
+                ftmg = self._new_more_general([ft for ft in self.features.keys() 
                                                if ft != featuretag.TRANSLITERATION])
-                ftmgstr = str(ftmg)
-                if already_created_set is None or ftmgstr not in already_created_set:
-                    if already_created_set is not None: already_created_set.add(ftmgstr)
-                    returnList.append(ftmg)
+                self._add_to_list(ftmg, returnList, already_created_set)
             else:
-                for remove_tag in self.tags.keys():
+                for remove_tag in self.features.keys():
                     if remove_tag == featuretag.POS: continue
-                    ftmg = self._new_more_general([ft for ft in self.tags.keys() 
+                    ftmg = self._new_more_general([ft for ft in self.features.keys() 
                                                    if ft != remove_tag])
-                    ftmgstr = str(ftmg)
-                    if already_created_set is None or ftmgstr not in already_created_set:
-                        if already_created_set is not None: already_created_set.add(ftmgstr)
-                        returnList.append(ftmg)
+                    self._add_to_list(ftmg, returnList, already_created_set)
         return returnList
 
     def get_full_general(self, fulllist = [], already_created_set = set()):
@@ -132,24 +82,51 @@ class featuretag:
         """
         return most-specified featuretag included in both self and other
         """
-        if other == None or self.tags[featuretag.POS] != other.tags[featuretag.POS]: return None
-        return self._new_more_general([ft for ft in self.tags.keys() 
-                                       if ft in other.tags and self.tags[ft] == other.tags[ft]])
+        return self.mostCommonIncluder(other)
+
+    def mostCommonIncluder(self, other):
+        """
+        return most-specified featuretag included in both self and other
+        """
+        if other == None or self.features[featuretag.POS] != other.features[featuretag.POS]: return None
+        return self._new_more_general([ft for ft in self.features.keys() 
+                                       if ft in other.features and self.features[ft] == other.features[ft]])
 
     def setFinite(self):
-        self.tags['finite'] = 'F'
+        self.features['finite'] = 'F'
 
-    def isValidTag(self, tag):
+    def isValidFeature(self, tag):
         return tag in featuretag.featuredict
 
+    def isValidTag(self, tag):
+        return self.isValidFeature(tag)
+
     def _new_more_general(self, tag_list):
-        if len(self.tags) <= 1: return None
-        ans = featuretag(None, self.tags[featuretag.POS])
+        if len(self.features) <= 1: return None
+        ans = featuretag(None, self.features[featuretag.POS])
         for ft in tag_list:
             if ft == featuretag.POS: continue
-            ans.add(ft, self.tags[ft])
+            ans.add(ft, self.features[ft])
         return ans
-    
+
+    def __str__(self):
+        if self.strout is None:
+            self.strout = self.features[featuretag.POS]
+
+            featurestr = ''
+            if featuretag.TRANSLITERATION in self.features:
+                featurestr += self.features[featuretag.TRANSLITERATION] + ' '
+            for feature in featuretag.featurenames:  # want features always in same order.
+                if feature in (featuretag.POS, featuretag.TRANSLITERATION) : continue
+                if not feature in self.features : continue
+                t = self.features[feature]
+                if t != None:
+                    featurestr += feature + '=' + t + ' '
+
+            if len(featurestr) > 0:
+                self.strout += '(' + featurestr[:len(featurestr)-1] + ')'
+
+        return self.strout
 
 class readFeatureTag(featuretag):
     """

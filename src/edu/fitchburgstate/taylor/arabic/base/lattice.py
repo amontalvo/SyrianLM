@@ -91,6 +91,7 @@ class Lattice:
     def __init__(self):
         self.nodes = dict()
         self.roots = set()
+        self.leaf_keys = set()
         self.itemcount = 0
         self.distinct_itemcount = 0
 
@@ -101,6 +102,7 @@ class Lattice:
         if str(item) not in self.nodes: self.distinct_itemcount += 1
         self.itemcount += 1
         self._populateParents(item, set())
+        self.leaf_keys.add(str(item))
 
     def simpleAddItem(self,item):
         '''
@@ -150,6 +152,12 @@ class Lattice:
         upperNode.addDown(lowerNode)
         lowerNode.addUp(upperNode)
 
+    def getDistinctKeySet(self):
+        return set(self.leaf_keys);
+
+    def getN(self):
+        return self.itemcount;
+
     def findItem(self, key):
         '''
         Find the item which matches the key
@@ -164,12 +172,31 @@ class Lattice:
         '''
         Find the node which matches the item
         
-        @param item: the item were trying to match
+        @param key: the item were trying to match
         @return: the item node or None if not found
         '''
         key = str(item)
         if key in self.nodes: return self.nodes[key]
         else: return None
+
+    def getCount(self, item):
+        '''
+        Find the count for the item which matches the item
+        
+        @param item: the item were trying to match
+        @return: the item count
+        '''
+        return self.getKeyCount(str(item))
+
+    def getKeyCount(self, key):
+        '''
+        Find the count for the item whose key matches key 
+        
+        @param item: the key of the item
+        @return: the item count
+        '''
+        if key in self.nodes: return self.nodes[key].count
+        else: return 0
 
     def getLeast(self, item):
         '''

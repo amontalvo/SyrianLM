@@ -1,28 +1,39 @@
 '''
-Created on Apr 10, 2014
+Created on Apr 21, 2014
 
 @author: andy
 '''
+
 import sys
 import fileinput
 import time
 import datetime
+import math
 #import cProfile
 #import pstats
 
 from edu.fitchburgstate.taylor.arabic.base.feature import readFeatureTag
 from edu.fitchburgstate.taylor.arabic.base.bigram import bigram
-from edu.fitchburgstate.taylor.arabic.base.lattice import Lattice
+from edu.fitchburgstate.taylor.arabic.base.bigram_lattice import BigramLattice
 
-def doRead(filename):
+def doReadBigramLattice(filename, bigramLat):
     ft1 = None
     filegen =  fileinput.input(filelist, openhook = fileinput.hook_encoded('utf8'))
     for ln in filegen:
         ft2 = readFeatureTag(ln)
-        featureLat.addItem(ft2)
         if ft1 is not None:
             bg = bigram(ft1, ft2)
             bigramLat.addItem(bg)
+        ft1 = ft2
+
+def doReadBigramList(filename, bigramList):
+    ft1 = None
+    filegen =  fileinput.input(filelist, openhook = fileinput.hook_encoded('utf8'))
+    for ln in filegen:
+        ft2 = readFeatureTag(ln)
+        if ft1 is not None:
+            bg = bigram(ft1, ft2)
+            bigramList.append(bg)
         ft1 = ft2
 
 if __name__ == '__main__':
@@ -30,14 +41,12 @@ if __name__ == '__main__':
     st = datetime.datetime.fromtimestamp(starttime).strftime('%Y-%m-%d %H:%M:%S')
     print(st)
 
-    featureLat = Lattice()
-    bigramLat = Lattice()
+    bigramLat = BigramLattice()
     filelist = sys.argv[1:]    # list of args except script name
 
     #profiler = cProfile.Profile()
     #profiler.enable()
-    for filename in filelist:
-        doRead(filename)
+    doReadBigramLattice(filelist[0], bigramLat)
     #profiler.disable()
     #ps = pstats.Stats(profiler).sort_stats('tottime')
     #ps.print_stats()
@@ -45,9 +54,11 @@ if __name__ == '__main__':
     endtime = time.time();
     elapsetime = endtime - starttime
 
-    feature_leaf_set = featureLat.getDistinctKeySet();
-    num_words = featureLat.getN();
-    bigram_leaf_set = bigramLat.getDistinctKeySet();
+    bigramList = []
+    doReadBigramList(filelist[1], bigramList)
+    
+    entropy = bigramLat.simple_entropy(bigramList)
+    perplexity = math.pow(2, entropy)
 
     #print(featureLat)
     #print(bigramLat)
@@ -55,3 +66,4 @@ if __name__ == '__main__':
     print("Read file in {0} seconds".format(elapsetime));
     st = datetime.datetime.fromtimestamp(endtime).strftime('%Y-%m-%d %H:%M:%S')
     print(st)
+    print("Perplexity = {0}".format(perplexity))
