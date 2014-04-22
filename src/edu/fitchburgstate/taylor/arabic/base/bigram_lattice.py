@@ -28,7 +28,7 @@ class BigramLattice(Lattice):
 
     def __init__(self):
         '''
-        Constructor
+        Constructor. Keep track of number of tags in first and second position of bigram
         '''
         # Prob(of|given)
         Lattice.__init__(self)
@@ -46,6 +46,9 @@ class BigramLattice(Lattice):
         return Lattice.addItemAndCount(self, bigram, already_counted)
 
     def addBigramCount(self, bigram, already_counted):
+        '''
+        Add to ref counts of tag1 and tag2
+        '''
         tag1str = str(bigram.tag1)
         tag1strtag2 = tag1str + "..TAG2"
         tag2str = str(bigram.tag2)
@@ -64,23 +67,32 @@ class BigramLattice(Lattice):
                 self.tag2s[tag2str] = 1
 
     def getBigramProbablity(self, trialbigram, probability_func):
+        '''
+        Give a probability function and a bigram, compute the probability of the bigram
+        '''
         bigram = self.getLeast(trialbigram)
         bgcount = self.getCount(bigram)
-        tag1str = str(bigram.tag1)
-        if tag1str in self.tag1s:
-            t1count = self.tag1s[tag1str]
-        else:
-            t1count = 0
+        t1count = self.getFirstCount(bigram.tag1)
         t1distinct = len(self.tag1s)
-        tag2str = str(bigram.tag2)
-        if tag2str in self.tag2s:
-            t2count = self.tag1s[tag2str]
-        else:
-            t2count = 0
+        t2count = self.getSecondCount(bigram.tag2)
         t2distinct = len(self.tag2s)
         n = self.getN()
         distinctCount = self.distinct_itemcount;
         return probability_func(n, distinctCount, bgcount, t1distinct, t1count, t2distinct, t2count)
+
+    def getFirstCount(self, t1):
+        '''
+        Get the number of times t1 appears as the first item of a bigram
+        '''
+        t1str = str(t1)
+        return self.tag1s[t1str] if t1str in self.tag1s else 0
+
+    def getSecondCount(self, t2):
+        '''
+        Get the number of times t2 appears as the second item of a bigram
+        '''
+        t2str = str(t2)
+        return self.tag2s[t2str] if t2str in self.tag2s else 0
 
     def simple_entropy(self, bigramList, probability_func = simple_laplace_count):
         '''
@@ -90,7 +102,11 @@ class BigramLattice(Lattice):
         and p(wi|w(i-1) ~= count(w(i-1)..wi)/count(wi)
         '''
         n = self.getN()
-        logprob = math.log2(1/n)
+        bg1 = bigramList[0]
+        t1count = self.getFirstCount(bg1.tag1)
+        if t1count == 0:
+            t1count = .5
+        logprob = math.log2(t1count/n)
         for bigram in bigramList:
             logprob += math.log2(self.getBigramProbablity(bigram, probability_func))
         return logprob / self.getN()

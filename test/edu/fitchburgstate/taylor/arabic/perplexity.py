@@ -1,6 +1,8 @@
 '''
 Created on Apr 21, 2014
 
+Running this with arguments data/padt.ft data/padt-reserve/ALH20010911.0001_story.ft
+
 @author: andy
 '''
 
@@ -58,7 +60,7 @@ if __name__ == '__main__':
     doReadBigramList(filelist[1], bigramList)
     
     entropy = bigramLat.simple_entropy(bigramList)
-    perplexity = math.pow(2, entropy)
+    perplexity = math.pow(2, -entropy)
 
     #print(featureLat)
     #print(bigramLat)
