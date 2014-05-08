@@ -72,11 +72,18 @@ class featuretag(FeatureHierarchicalItem):
         return returnList
 
     def get_full_general(self, fulllist = [], already_created_set = set()):
+        '''
+        returns all the item that are less specific 
+        '''
         featuretaglist = self.get_more_general_list(already_created_set)
         fulllist += featuretaglist
         for ft in featuretaglist:
             ft.get_full_general(fulllist, already_created_set)
         return fulllist
+
+    def getLeast(self):
+        if len(self.features) > 1: return featuretag(None, self.features[featuretag.POS])
+        else: return self
 
     def getMax(self, other):
         """

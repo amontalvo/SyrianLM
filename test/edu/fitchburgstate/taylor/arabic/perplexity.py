@@ -10,35 +10,55 @@ import sys
 import fileinput
 import time
 import datetime
-import math
+import codecs
+import pickle
+
 #import cProfile
 #import pstats
 
 from edu.fitchburgstate.taylor.arabic.base.feature import readFeatureTag
 from edu.fitchburgstate.taylor.arabic.base.bigram import bigram
 from edu.fitchburgstate.taylor.arabic.base.bigram_lattice import BigramLattice
+from edu.fitchburgstate.taylor.arabic.base.lattice_probability_helpers import GoodTuringEstimators
+from edu.fitchburgstate.taylor.arabic.base.lattice_probability_helpers import SimpleLaplaceCount
 
 def doReadBigramLattice(filename, bigramLat):
-    ft1 = None
-    filegen =  fileinput.input(filelist, openhook = fileinput.hook_encoded('utf8'))
+    starttime = time.time()
+    ft1 = bigram.BIGRAM_START
+    filegen =  fileinput.input(filename, openhook = fileinput.hook_encoded('utf8'))
     for ln in filegen:
         ft2 = readFeatureTag(ln)
-        if ft1 is not None:
-            bg = bigram(ft1, ft2)
-            bigramLat.addItem(bg)
+        bg = bigram(ft1, ft2)
+        bigramLat.addItem(bg)
         ft1 = ft2
+    ft2 = bigram.BIGRAM_END
+    bg = bigram(ft1, ft2)
+    bigramLat.addItem(bg)
+    endtime = time.time();
+    elapsetime = endtime - starttime
+    print("Read {0} file in {1} seconds. {2} items".format(filename, elapsetime, bigramLat.getN()))
+    return elapsetime
 
 def doReadBigramList(filename, bigramList):
-    ft1 = None
-    filegen =  fileinput.input(filelist, openhook = fileinput.hook_encoded('utf8'))
+    starttime = time.time()
+    ft1 = bigram.BIGRAM_START
+    filegen =  fileinput.input(filename, openhook = fileinput.hook_encoded('utf8'))
     for ln in filegen:
         ft2 = readFeatureTag(ln)
         if ft1 is not None:
             bg = bigram(ft1, ft2)
             bigramList.append(bg)
         ft1 = ft2
+    ft2 = bigram.BIGRAM_END
+    bg = bigram(ft1, ft2)
+    bigramList.append(bg)
+    endtime = time.time();
+    elapsetime = endtime - starttime
+    print("Read {0} file in {1} seconds. {2} items".format(filename, elapsetime, len(bigramList)))
+    return elapsetime
 
 if __name__ == '__main__':
+    sys.setrecursionlimit(10000)
     starttime = time.time()
     st = datetime.datetime.fromtimestamp(starttime).strftime('%Y-%m-%d %H:%M:%S')
     print(st)
@@ -46,26 +66,37 @@ if __name__ == '__main__':
     bigramLat = BigramLattice()
     filelist = sys.argv[1:]    # list of args except script name
 
-    #profiler = cProfile.Profile()
-    #profiler.enable()
     doReadBigramLattice(filelist[0], bigramLat)
-    #profiler.disable()
-    #ps = pstats.Stats(profiler).sort_stats('tottime')
-    #ps.print_stats()
+    #f = codecs.open('bigramLat', encoding='utf-8', mode='w+')
+    #pickle.dump(bigramLat, f)
+    #f.close()
 
-    endtime = time.time();
-    elapsetime = endtime - starttime
+    end1time = time.time();
+    elapsetime = end1time - starttime
+    print("Read {0} file in {1} seconds. {2} items".format(filelist[0], elapsetime, bigramLat.getN()));
 
     bigramList = []
     doReadBigramList(filelist[1], bigramList)
-    
-    entropy = bigramLat.simple_entropy(bigramList)
-    perplexity = math.pow(2, -entropy)
+    end2time = time.time();
+    elapse2time = end2time - end1time
+    print("Read {0} file in {1} seconds. {2} items".format(filelist[1], elapse2time, len(bigramList)));
+
+    estimator = SimpleLaplaceCount(bigramLat)
+    perplexity = bigramLat.perplexity(bigramList, estimator)
+    end3time = time.time();
+    elapse3time = end3time - end2time
+    print("Simple Laplace perplexity calculation took {0} seconds".format(elapse3time));
+    print("Perplexity = {0}".format(perplexity))
+    print("Probs done {0}, fallbacks {1}".format(estimator.probs_done, estimator.fallbacks_done))
+
+    estimator = GoodTuringEstimators(bigramLat)
+    perplexity = bigramLat.perplexity(bigramList, estimator)
+    end3time = time.time();
+    elapse3time = end3time - end2time
+    print("Good-Turing perplexity calculation took {0} seconds".format(elapse3time));
+    print("Perplexity = {0}".format(perplexity))
+    print("Probs done {0}, fallbacks {1}".format(estimator.probs_done, estimator.fallbacks_done))
 
     #print(featureLat)
     #print(bigramLat)
 
-    print("Read file in {0} seconds".format(elapsetime));
-    st = datetime.datetime.fromtimestamp(endtime).strftime('%Y-%m-%d %H:%M:%S')
-    print(st)
-    print("Perplexity = {0}".format(perplexity))

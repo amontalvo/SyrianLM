@@ -90,7 +90,7 @@ class LatticeNode:
 class Lattice:
     def __init__(self):
         self.nodes = dict()
-        self.roots = set()
+        self.root_nodes = set()
         self.leaf_keys = set()
         self.itemcount = 0
         self.distinct_itemcount = 0
@@ -267,6 +267,8 @@ class Lattice:
             print("Chose randomly from {0} items matched".format(len(highestcountitems)))
             for node in highestcountitems:
                 print("  "+str(node))
+        if returnitem is None:
+            returnitem = item.getLeast()
         return returnitem
 
     def _populateParents(self, item, already_added):
@@ -281,12 +283,12 @@ class Lattice:
             for upper in item.get_more_general_list():
                 self.addItemRelation(upper, node)
                 self._populateParents(upper, already_added)
-            if len(node.up) == 0: self.roots.add(node)
+            if len(node.up) == 0: self.root_nodes.add(node)
 
     def __str__(self):
         s = "item count: "+str(self.itemcount)+" distinct items:"+str(self.distinct_itemcount)+" node count:"+str(len(self.nodes))+"\n"
         s += "roots:\n"
-        rootlist = sorted(list(self.roots), key=lambda x: str(x))
+        rootlist = sorted(list(self.root_nodes), key=lambda x: str(x))
         already_str = set()
         for root in rootlist:
             s += "  " +str(root) + "\n"
