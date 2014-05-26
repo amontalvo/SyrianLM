@@ -42,7 +42,9 @@ class BigramLattice(Lattice):
         @return: perplexity
         @see: lattice_probability_helpers
         '''
-        return math.pow(2, -self.simpleEntropy(bigramList, probability_helper))
+        entropy = self.simpleEntropy(bigramList, probability_helper)
+
+        return math.pow(2, entropy)
 
     def simpleAddItem(self,item):
         '''
@@ -85,7 +87,20 @@ class BigramLattice(Lattice):
                 print("Processed {0} items".format(count))
             p = probability_helper.getProbability(bigram)
             try: 
-                logprob += p*math.log2(p)
+                logprob += -math.log2(p)  # I changed this from . += p*log2(p)
             except:
                 print("Could not log "+str(p))
-        return logprob #/ self.getN()
+        return logprob / count  #/ self.getN() 
+        '''
+        I justify my changes as follows: 
+        Entropy is the expected value of log2(1/p(bigram)) over all bigrams
+        So we'd be justified in summing p*(log2(1/p(bigram)) if we were summing
+        over the list of bigrams (where each would occur exactly once, but the
+        probabilities are listed.)  But we aren't doing this, because we know
+        that not all bigrams will occur in the test document, and some will
+        occur more than once.  So I instead
+        compute the expected value by the elementary school method of
+        summing over all (including possible repetitions) and dividing by
+        the count.
+        '''
+

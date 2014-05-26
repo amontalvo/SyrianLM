@@ -62,6 +62,7 @@ class SimpleLaplaceCount(LatticeProbabilityHelper):
             denom = t2count + t1nodecount
         else: denom = t2count + 1
         p = (bgcount + 1)/denom
+        print("LaPlace est. p:",p)
         return p
 
 class GoodTuringEstimators(SimpleLaplaceCount):
